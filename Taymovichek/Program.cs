@@ -1,20 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Reflection;
 
+// HUI ZNAET SHO nu tipo shobi service zainjektit
 using Microsoft.Extensions.DependencyInjection;
 
+// Discord API lib
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using System.Threading;
 
+// HTML Parser
 using HtmlAgilityPack;
-using System.IO;
-using System.Text.RegularExpressions;
+
 
 namespace Taymovichek
 {
