@@ -39,7 +39,7 @@ namespace Taymovichek
         private int MAX_SECONDS_BETWEEN_UPDATE = 10 * 60; // 10 min (seconds)
 
 
-        private string TOKEN = "YOUR_BOT_TOKEN";//"NzMwODkxNjU0ODY4ODkzNzU3.XweGNQ.pLk_xVjYKqy2yolGjzkZ5jCgpEI";
+        private string TOKEN = "YOUR_BOT_TOKEN";
         private string ANNOUNCEMENT_MESSAGE = "АХТУНГ ! ШОТОПРОИЗОШЛО !";
 
         private string URL = @"http://wowcircle.net/stat.html";
