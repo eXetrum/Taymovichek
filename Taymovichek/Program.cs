@@ -15,49 +15,44 @@ using Discord.WebSocket;
 
 // HTML Parser
 using HtmlAgilityPack;
-
+using System.Configuration;
+using SuperSocket.ClientEngine;
+using System.Text;
 
 namespace Taymovichek
 {
-    class CircleServer
-    {
-        public enum StatusEnum { UP, DOWN }
-        public string Name { get; set; }
-        public int Online { get; set; }
-        public DateTime OnlineLastModified { get; set; }
-        public TimeSpan Uptime { get; set; }
-        public DateTime UptimeLastModified { get; set; }
-
-        public StatusEnum Status { get; set; }
-    }
+    
     class Program
     {
         static void Main(string[] args) => new Program().RunBotAsync().GetAwaiter().GetResult();
 
         // Const things
-        private int DELAY = 30 * 1000; // 30 sec (milliseconds)
-        private int MAX_SECONDS_BETWEEN_UPDATE = 10 * 60; // 10 min (seconds)
+        private int DELAY = 60 * 1000; // 60 sec (milliseconds)
+        private int MAX_SECONDS_BETWEEN_UPDATE = 15 * 60; // 15 min (seconds)
 
 
-        private string TOKEN = "YOUR_BOT_TOKEN";
+        private string TOKEN = "NzMwODkxNjU0ODY4ODkzNzU3.Xwgv4A.G9kZmieaByEMj5na5Sm4q-Xplu8";
         private string ANNOUNCEMENT_MESSAGE = "АХТУНГ ! ШОТОПРОИЗОШЛО !";
 
         private string URL = @"http://wowcircle.net/stat.html";
         private string USER_AGENT = @"User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:78.0) Gecko/20100101 Firefox/78.0";
+        
 
         private DiscordSocketClient _client;
         private CommandService _commands;
         private IServiceProvider _services;
-        private ulong botID;
 
         // Public data        
-        static public Dictionary<string, CircleServer> cache = new Dictionary<string, CircleServer>();
+        static public Dictionary<string, WowCircleServer> cache = new Dictionary<string, WowCircleServer>();
         static public Dictionary<string, List<string>> watchers = new Dictionary<string, List<string>>();
         static public HashSet<string> servers = new HashSet<string>();
-
+        static Configuration cfg = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
 
         public async Task RunBotAsync()
         {
+            // Read resources prev settings
+            LoadResources();
+
             _client = new DiscordSocketClient();
             _commands = new CommandService();
 
@@ -79,6 +74,81 @@ namespace Taymovichek
             await Task.Delay(-1);
         }
 
+        private void LoadResources()
+        {
+            string PREFIX = "[Username]:";
+            string SEPARATOR = "\r\n";
+            foreach (var key in cfg.AppSettings.Settings.AllKeys)
+            {
+                if(key.StartsWith(PREFIX))
+                {
+                    string value = cfg.AppSettings.Settings[key].Value;
+                    string username = key.Substring(PREFIX.Length);
+                    if (!watchers.ContainsKey(username))
+                    {
+                        watchers.Add(username, new List<string>());
+                    }
+
+                    string[] servers = value.Split(SEPARATOR, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var serverName in servers)
+                    {
+                        if (!watchers[username].Contains(serverName))
+                        {
+                            watchers[username].Add(serverName);
+                        }
+                    }      
+                }
+            }
+        }
+
+        public static void AddServer(string username, string servername)
+        {
+            string PREFIX = "[Username]:";
+            string SEPARATOR = "\r\n";
+
+            if (cfg.AppSettings.Settings[PREFIX + username] == null)
+                cfg.AppSettings.Settings.Add(PREFIX + username, "");
+
+            string value = cfg.AppSettings.Settings[PREFIX + username].Value;
+            string[] servers = value.Split(SEPARATOR, StringSplitOptions.RemoveEmptyEntries);
+
+            bool found = false;
+            StringBuilder sb = new StringBuilder();
+            foreach(var server in servers)
+            {
+                sb.Append(server + SEPARATOR);
+                if (server.Equals(servername)) found = true;
+            }
+
+            if (!found) sb.Append(servername + SEPARATOR);
+
+            cfg.AppSettings.Settings[PREFIX + username].Value = sb.ToString();
+            cfg.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+        }
+        public static void RemoveServer(string username, string servername)
+        {
+            string PREFIX = "[Username]:";
+            string SEPARATOR = "\r\n";
+
+            if (cfg.AppSettings.Settings[PREFIX + username] == null)
+                cfg.AppSettings.Settings.Add(PREFIX + username, "");
+
+            string value = cfg.AppSettings.Settings[PREFIX + username].Value;
+            string[] servers = value.Split(SEPARATOR, StringSplitOptions.RemoveEmptyEntries);
+
+            StringBuilder sb = new StringBuilder();
+            foreach (var server in servers)
+            {
+                if (server.Equals(servername)) continue;
+                sb.Append(server + SEPARATOR);
+            }
+
+            cfg.AppSettings.Settings[PREFIX + username].Value = sb.ToString();
+            cfg.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+        }
+
         private Task OnClientReady()
         {
             Thread th = new Thread(FetchStatus);
@@ -89,21 +159,22 @@ namespace Taymovichek
 
         private void FetchStatus(object obj)
         {
-            botID = _client.CurrentUser.Id;
+            HtmlWeb web = new HtmlWeb();
+            web.UserAgent = USER_AGENT;
+            web.UseCookies = true;
+            web.UsingCache = false;
+            //web.CaptureRedirect = true;
 
             while (true)
             {
                 try
                 {
-
-                    HtmlWeb web = new HtmlWeb();
-                    web.UserAgent = USER_AGENT;
                     web.UseCookies = true;
+                    web.CacheOnly = false;
                     web.UsingCache = false;
-                    //web.CaptureRedirect = true;
+                    web.UsingCacheIfExists = false;
 
                     HtmlDocument doc = web.Load(URL);
-
 
                     HtmlNode[] nodes = doc.DocumentNode.SelectNodes("//div[contains(@class, 'server-item-bg')]").ToArray();
 
@@ -122,7 +193,7 @@ namespace Taymovichek
                         if (!cache.ContainsKey(serverName))
                         {
                             cache.Add(serverName,
-                                new CircleServer
+                                new WowCircleServer
                                 {
                                     Name = serverName,
                                     Online = online,
@@ -149,53 +220,63 @@ namespace Taymovichek
                         message += string.Format("{0} | {1} | {2}", serverName, online, uptime) + Environment.NewLine;
                     }
 
-                    Console.WriteLine("{0,-20}  {1,18}  {2, 16}", "Server", "LastModified", "Status");
-                    foreach (var serverName in cache.Keys)
-                    {
-                        long secondsBetweenUpdate = Convert.ToInt64(-1 * cache[serverName].UptimeLastModified.Subtract(DateTime.Now).TotalSeconds);
-
-                        Console.WriteLine("{0,-20}  {1,18}  {2, 16}", 
-                            serverName, secondsBetweenUpdate, cache[serverName].Status.ToString());
-                        // Uptime == 0 
-                        // Stats last modf >= 10 min
-                        if (cache[serverName].Uptime.Equals(TimeSpan.FromSeconds(0))
-                            || secondsBetweenUpdate >= MAX_SECONDS_BETWEEN_UPDATE)
-                        {
-                            cache[serverName].Status = CircleServer.StatusEnum.DOWN;
-                        } 
-                        else
-                        {
-                            cache[serverName].Status = CircleServer.StatusEnum.UP;
-                        }
-                    }
-                    Console.WriteLine();
+                    // Update servers status
+                    updateServers();
 
                     // Check subscribers
-                    foreach(var userName in watchers.Keys)
-                    {
-                        foreach(var server in watchers[userName])
-                        {
-                            if(cache[server].Status == CircleServer.StatusEnum.DOWN)
-                            {
-                                string[] chunks = userName.Split('#');
-                                string username = chunks[0];
-                                string discriminator = chunks[1];
+                    checkSubscribers();
 
-                                SocketUser userSocket = _client.GetUser(username, discriminator);
-                                userSocket.SendMessageAsync(string.Format("{0} ->>>> {1}\n", ANNOUNCEMENT_MESSAGE, server));
-                            }
-                        }
-                    }
-
-                    
                 }
                 catch (Exception ex)
                 {
                     Console.Error.WriteLine("Error: {0}", ex.Message);
                 }
-                
 
-                Thread.Sleep(DELAY);
+                int sleepTimeout = new Random().Next(DELAY, 2 * DELAY);
+                Thread.Sleep(sleepTimeout);
+            }
+        }
+
+        private void updateServers()
+        {
+            Console.WriteLine("{0,-20}  {1,18}  {2, 16}", "Server", "LastModified", "Status");
+            foreach (var serverName in cache.Keys)
+            {
+                long secondsBetweenUpdate = Convert.ToInt64(-1 * cache[serverName].UptimeLastModified.Subtract(DateTime.Now).TotalSeconds);
+
+                Console.WriteLine("{0,-20}  {1,18}  {2, 16}",
+                    serverName, secondsBetweenUpdate, cache[serverName].Status.ToString());
+                // Uptime == 0 
+                // Stats last modf >= 10 min
+                if (cache[serverName].Uptime.Equals(TimeSpan.FromSeconds(0))
+                    || secondsBetweenUpdate >= MAX_SECONDS_BETWEEN_UPDATE)
+                {
+                    cache[serverName].Status = WowCircleServer.StatusEnum.DOWN;
+                }
+                else
+                {
+                    cache[serverName].Status = WowCircleServer.StatusEnum.UP;
+                }
+            }
+            Console.WriteLine();
+        }
+
+        private void checkSubscribers()
+        {
+            foreach (var userName in watchers.Keys)
+            {
+                foreach (var server in watchers[userName])
+                {
+                    if (cache[server].Status == WowCircleServer.StatusEnum.DOWN)
+                    {
+                        string[] chunks = userName.Split('#');
+                        string username = chunks[0];
+                        string discriminator = chunks[1];
+
+                        SocketUser userSocket = _client.GetUser(username, discriminator);
+                        userSocket.SendMessageAsync(string.Format("{0} ->>>> {1}\n", ANNOUNCEMENT_MESSAGE, server));
+                    }
+                }
             }
         }
 

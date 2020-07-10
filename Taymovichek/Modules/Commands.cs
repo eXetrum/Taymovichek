@@ -19,6 +19,7 @@ namespace Taymovichek.Modules
 
             await ReplyAsync(sb.ToString());
         }
+
         [Command("list")]
         public async Task ListServers()
         {
@@ -56,6 +57,7 @@ namespace Taymovichek.Modules
                 foreach (var server in Program.servers)
                 {
                     Program.watchers[nickname].Remove(server);
+                    Program.RemoveServer(nickname, server);
                 }
                 await ReplyAsync(string.Format("{0} now is no more watching for any server\n", Context.User.Username));
                 return;
@@ -71,6 +73,7 @@ namespace Taymovichek.Modules
             if (Program.watchers[nickname].Contains(serverName))
             {
                 Program.watchers[nickname].Remove(serverName);
+                Program.RemoveServer(nickname, serverName);
                 await ReplyAsync(string.Format("{0} is no more watching for {1}\n", Context.User.Username, serverName));
                 return;
             }
@@ -90,7 +93,10 @@ namespace Taymovichek.Modules
                 foreach(var server in Program.servers)
                 {
                     if (!Program.watchers[nickname].Contains(server))
+                    {
                         Program.watchers[nickname].Add(server);
+                        Program.AddServer(nickname, server);
+                    }
                 }
                 await ReplyAsync(string.Format("{0} now is watching for each server\n", Context.User.Username));
                 return;
@@ -109,6 +115,7 @@ namespace Taymovichek.Modules
                 return;
             }
             Program.watchers[nickname].Add(serverName);
+            Program.AddServer(nickname, serverName);
             await ReplyAsync(string.Format("{0} now is watching for {1}\n", Context.User.Username, serverName));
         }
 
