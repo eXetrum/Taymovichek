@@ -18,7 +18,6 @@ C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\bin\Release\netcoreapp3.1\Su
 C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\bin\Release\netcoreapp3.1\System.Interactive.Async.dll
 C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\bin\Release\netcoreapp3.1\System.Linq.Async.dll
 C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\bin\Release\netcoreapp3.1\WebSocket4Net.dll
-C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\obj\Release\netcoreapp3.1\Taymovichek.csprojAssemblyReference.cache
 C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\obj\Release\netcoreapp3.1\Taymovichek.AssemblyInfoInputs.cache
 C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\obj\Release\netcoreapp3.1\Taymovichek.AssemblyInfo.cs
 C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\obj\Release\netcoreapp3.1\Taymovichek.csproj.CopyComplete
