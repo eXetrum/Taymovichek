@@ -29,7 +29,8 @@ namespace Taymovichek
         // Const things
         private int DELAY = 60 * 1000; // 60 sec (milliseconds)
         private int MAX_SECONDS_BETWEEN_UPDATE = 15 * 60; // 15 min (seconds)
-
+        private static ulong CHANNEL_ID = 730891176114389150;
+        private static bool IS_PM_AVAILABLE = false;
 
         private string TOKEN = "YOUR_TOKEN_HERE";
         private string ANNOUNCEMENT_MESSAGE = "АХТУНГ ! ШОТОПРОИЗОШЛО !";
@@ -224,7 +225,7 @@ namespace Taymovichek
                     updateServers();
 
                     // Check subscribers
-                    checkSubscribers();
+                    notifySubscribers();
 
                 }
                 catch (Exception ex)
@@ -261,20 +262,27 @@ namespace Taymovichek
             Console.WriteLine();
         }
 
-        private void checkSubscribers()
+        private void notifySubscribers()
         {
+            var channelSocket = _client.GetChannel(CHANNEL_ID) as IMessageChannel;
+
             foreach (var userName in watchers.Keys)
             {
                 foreach (var server in watchers[userName])
                 {
                     if (cache[server].Status == WowCircleServer.StatusEnum.DOWN)
                     {
-                        string[] chunks = userName.Split('#');
-                        string username = chunks[0];
-                        string discriminator = chunks[1];
+                        if (IS_PM_AVAILABLE)
+                        {
+                            string[] chunks = userName.Split('#');
+                            string username = chunks[0];
+                            string discriminator = chunks[1];
 
-                        SocketUser userSocket = _client.GetUser(username, discriminator);
-                        userSocket.SendMessageAsync(string.Format("{0} ->>>> {1}\n", ANNOUNCEMENT_MESSAGE, server));
+                            SocketUser userSocket = _client.GetUser(username, discriminator);
+                            userSocket.SendMessageAsync(string.Format("{0} ->>>> {1}\n", ANNOUNCEMENT_MESSAGE, server));
+                        }
+
+                        channelSocket.SendMessageAsync(string.Format("{0} ->>>> {1}\n", ANNOUNCEMENT_MESSAGE, server));
                     }
                 }
             }
