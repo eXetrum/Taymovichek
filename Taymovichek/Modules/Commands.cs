@@ -12,10 +12,16 @@ namespace Taymovichek.Modules
         [Command("help")]
         public async Task Help ()
         {
-            string[] commands = { "help", "list", "watch", "unwatch", "status" };
+            string[] commands = { 
+                "help - отобразить это меню", 
+                "list - показать список слежения", 
+                "watch <\"server name\"> - добавить сервер в список слежения", 
+                "unwatch <\"server name\"> - убрать сервер из списка слежения", 
+                "status - отобразить текущий статус серверов" 
+            };
 
             StringBuilder sb = new StringBuilder();
-            foreach (var item in commands) sb.Append(item + "\n");
+            foreach (var item in commands) sb.Append(item + Environment.NewLine);
 
             await ReplyAsync(sb.ToString());
         }
@@ -23,100 +29,99 @@ namespace Taymovichek.Modules
         [Command("list")]
         public async Task ListServers()
         {
-            string nickname = Context.User.Username + "#" + Context.User.Discriminator;
+            string nickName = string.Format("{0}#{1}", Context.User.Username, Context.User.Discriminator);
+            var userList = Program.GetUserList(nickName);
 
-            // Ensure nickname exists
-            if (!Program.watchers.ContainsKey(nickname)) Program.watchers.Add(nickname, new List<string>());
-
+            if (userList.Count == 0)
+            {
+                await ReplyAsync(string.Format("Ваш список слежения пуст.{0}", Environment.NewLine));
+                return;
+            }
 
             StringBuilder sb = new StringBuilder();
-            if (Program.watchers[nickname].Count == 0)
+            foreach (var serverName in userList)
             {
-                sb.Append("Your watching list is empy.\n");
+                sb.Append(string.Format("{0}{1}", serverName, Environment.NewLine));
             }
-            else
-            {
-                foreach (var serverName in Program.watchers[nickname])
-                {
-                    sb.Append(string.Format("{0}\n", serverName));
-                }
-            }
+
             await ReplyAsync(sb.ToString());
+            return;
         }
 
         [Command("unwatch")]
         public async Task UnWatch(string serverName)
         {
-            string nickname = Context.User.Username + "#" + Context.User.Discriminator;
+            string nickName = string.Format("{0}#{1}", Context.User.Username, Context.User.Discriminator);
 
-            // Ensure nickname exists
-            if (!Program.watchers.ContainsKey(nickname)) Program.watchers.Add(nickname, new List<string>());
+            var userList = Program.GetUserList(nickName);
 
+            if(userList.Count == 0)
+            {
+                await ReplyAsync(string.Format("Ваш список слежения пуст.{0}", Environment.NewLine));
+                return;
+            }
+
+            // Unwatch everything
             if (serverName.Equals("*"))
             {
-                foreach (var server in Program.servers)
+                foreach (var server in userList)
                 {
-                    Program.watchers[nickname].Remove(server);
-                    Program.RemoveServer(nickname, server);
+                    Program.Unwatch(nickName, server);
                 }
-                await ReplyAsync(string.Format("{0} now is no more watching for any server\n", Context.User.Username));
+
+                await ReplyAsync(string.Format("{0} более не следит ни за одним сервером{1}", Context.User.Username, Environment.NewLine));
                 return;
             }
 
             // Ensure server name is valid name
-            if (!Program.servers.Contains(serverName))
+            if (!Program.IsServerExists(serverName))
             {
-                await ReplyAsync(string.Format("{0} is incorrect server name\n", serverName));
+                await ReplyAsync(string.Format("{0} некорректное имя сервера{1}", serverName, Environment.NewLine));
                 return;
             }
 
-            if (Program.watchers[nickname].Contains(serverName))
+            if(!Program.IsSubscribeExists(nickName, serverName))
             {
-                Program.watchers[nickname].Remove(serverName);
-                Program.RemoveServer(nickname, serverName);
-                await ReplyAsync(string.Format("{0} is no more watching for {1}\n", Context.User.Username, serverName));
+                await ReplyAsync(string.Format("{0} еще не следит за сервером {1}{2}", Context.User.Username, serverName, Environment.NewLine));
                 return;
             }
-            await ReplyAsync(string.Format("{0} is not watching yet for {1}\n", Context.User.Username, serverName));
+
+            Program.Unwatch(nickName, serverName);
+            await ReplyAsync(string.Format("{0} более не следит за сервером {1}{2}", Context.User.Username, serverName, Environment.NewLine));
         }
 
         [Command("watch")]
         public async Task Watch(string serverName)
         {
-            string nickname = Context.User.Username + "#" + Context.User.Discriminator;
+            string nickName = string.Format("{0}#{1}", Context.User.Username, Context.User.Discriminator);
 
-            // Ensure nickname exists
-            if (!Program.watchers.ContainsKey(nickname))  Program.watchers.Add(nickname, new List<string>());
-            
-            if(serverName.Equals("*"))
+            // Watch for everything
+            if (serverName.Equals("*"))
             {
-                foreach(var server in Program.servers)
+                foreach (var server in Program.GetServerNames())
                 {
-                    if (!Program.watchers[nickname].Contains(server))
-                    {
-                        Program.watchers[nickname].Add(server);
-                        Program.AddServer(nickname, server);
-                    }
+                    Program.Watch(nickName, server);
                 }
-                await ReplyAsync(string.Format("{0} now is watching for each server\n", Context.User.Username));
+
+                await ReplyAsync(string.Format("{0} следит за всеми серверами.{1}", Context.User.Username, Environment.NewLine));
                 return;
             }
 
             // Ensure server name is valid name
-            if(!Program.servers.Contains(serverName))
+            if(!Program.IsServerExists(serverName))
             {
-                await ReplyAsync(string.Format("{0} is incorrect server name\n", serverName));
+                await ReplyAsync(string.Format("{0} некорректное имя сервера.{1}", serverName, Environment.NewLine));
                 return;
             }
 
-            if (Program.watchers[nickname].Contains(serverName))
+            if (Program.IsSubscribeExists(nickName, serverName))
             {
-                await ReplyAsync(string.Format("{0} already assigned to {1}\n", serverName, Context.User.Username));
+                await ReplyAsync(string.Format("{0} уже следит за сервером {1}{2}", serverName, Context.User.Username, Environment.NewLine));
                 return;
             }
-            Program.watchers[nickname].Add(serverName);
-            Program.AddServer(nickname, serverName);
-            await ReplyAsync(string.Format("{0} now is watching for {1}\n", Context.User.Username, serverName));
+
+            Program.Watch(nickName, serverName);
+            await ReplyAsync(string.Format("{0} теперь следит за сервером {1}{2}", Context.User.Username, serverName, Environment.NewLine));
         }
 
         [Command("status")]
@@ -130,7 +135,7 @@ namespace Taymovichek.Modules
 
             StringBuilder sb = new StringBuilder();
             sb.Append(string.Format(CONSOLE_FORMAT_STR, "ServerName", "Online", "Uptime", "Status"));
-            foreach (var item in Program.cache)
+            foreach (var item in Program.GetCache())
             {
                 string consoleText = string.Format(CONSOLE_FORMAT_STR,
                     item.Value.Name,
@@ -148,14 +153,12 @@ namespace Taymovichek.Modules
                 fields.Add(new EmbedFieldBuilder() { IsInline = true, Name = item.Value.Name, Value = discordText });
             }
 
-
-
             var embed = new EmbedBuilder() {
                 Title = title,
+                Url = Program.SERVER_STATUS_URL,
                 Fields = fields
             };
-            
-
+  
             Console.WriteLine(sb.ToString());
             await ReplyAsync("", false, embed.Build());
         }

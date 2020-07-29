@@ -37,3 +37,4 @@ C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\obj\Debug\netcoreapp3.1\Taym
 C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\obj\Debug\netcoreapp3.1\Taymovichek.dll
 C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\obj\Debug\netcoreapp3.1\Taymovichek.pdb
 C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\obj\Debug\netcoreapp3.1\Taymovichek.genruntimeconfig.cache
+C:\Users\hAPpY\source\repos\Taymovichek\Taymovichek\obj\Debug\netcoreapp3.1\Taymovichek.csprojAssemblyReference.cache
