@@ -312,9 +312,9 @@ namespace Taymovichek
                         if (watchers[userName].Contains(serverName))
                         {
                             // Send private message notification
-                            if (IS_PM_AVAILABLE && notifyCounters[serverName] == 0)
+                            if (notifyCounters[serverName] == 0)
                             {
-                                string message = string.Format("{0} ->>>> {1}\n", ANNOUNCEMENT_MESSAGE, serverName);
+                                string message = string.Format("{0} ->>>> {1}\n", ANNOUNCEMENT_MESSAGE, serverName, IS_PM_AVAILABLE);
                                 notifications.Enqueue(new DiscordPMNotificationEntity(_client, message, userName));
                             }
                         }
