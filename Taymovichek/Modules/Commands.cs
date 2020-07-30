@@ -13,11 +13,11 @@ namespace Taymovichek.Modules
         public async Task Help ()
         {
             string[] commands = { 
-                "help - отобразить это меню", 
-                "list - показать список слежения", 
+                "help - отобразить это меню",
+                "list - отобразить текущий статус отслеживаемых серверов", 
                 "watch <\"server name\"> - добавить сервер в список слежения", 
                 "unwatch <\"server name\"> - убрать сервер из списка слежения", 
-                "status - отобразить текущий статус серверов" 
+                "status - отобразить текущий статус отслеживаемых серверов"
             };
 
             StringBuilder sb = new StringBuilder();
@@ -30,7 +30,7 @@ namespace Taymovichek.Modules
         public async Task ListServers()
         {
             string nickName = string.Format("{0}#{1}", Context.User.Username, Context.User.Discriminator);
-            var userList = Program.GetUserList(nickName);
+            var userList = Program.GetUserList();
 
             if (userList.Count == 0)
             {
@@ -38,22 +38,55 @@ namespace Taymovichek.Modules
                 return;
             }
 
+            string DISCORD_FORMAT_STR = "{0,-20}\n{1,-16}\n{2,-16}\n";
+            string CONSOLE_FORMAT_STR = "{0,-20}{1,-16}{2,-16}{3,-12}\n";
+
+
+            string title = string.Format("WowCircle Server Status, Subscriber {0}", Context.User.Username);
+            var fields = new List<EmbedFieldBuilder>();
+
             StringBuilder sb = new StringBuilder();
-            foreach (var serverName in userList)
+            sb.Append(string.Format(CONSOLE_FORMAT_STR, "ServerName", "Online", "Uptime", "Status"));
+
+            foreach (var item in Program.GetCache())
             {
-                sb.Append(string.Format("{0}{1}", serverName, Environment.NewLine));
+                if (userList.Contains(item.Value.Name))
+                {
+                    string consoleText = string.Format(CONSOLE_FORMAT_STR,
+                        item.Value.Name,
+                        item.Value.Online,
+                        item.Value.Uptime,
+                        item.Value.Status.ToString());
+
+                    string discordText = string.Format(DISCORD_FORMAT_STR,
+                        item.Value.Online,
+                        item.Value.Uptime,
+                        Program.EnquoteStatus(item.Value.Status));
+
+                    sb.Append(consoleText);
+
+                    fields.Add(new EmbedFieldBuilder() { IsInline = true, Name = item.Value.Name, Value = discordText });
+                }
             }
 
-            await ReplyAsync(sb.ToString());
+            var embed = new EmbedBuilder()
+            {
+                Title = title,
+                Url = Program.SERVER_STATUS_URL,
+                Fields = fields
+            };
+
+            Console.WriteLine(sb.ToString());
+            await ReplyAsync("", false, embed.Build());
             return;
         }
 
-        [Command("unwatch")]
+        [Command("unwatch"), RequireOwner()]
         public async Task UnWatch(string serverName)
         {
             string nickName = string.Format("{0}#{1}", Context.User.Username, Context.User.Discriminator);
 
-            var userList = Program.GetUserList(nickName);
+            var userList = Program.GetUserList();
 
             if(userList.Count == 0)
             {
@@ -66,7 +99,7 @@ namespace Taymovichek.Modules
             {
                 foreach (var server in userList)
                 {
-                    Program.Unwatch(nickName, server);
+                    Program.Unwatch(server);
                 }
 
                 await ReplyAsync(string.Format("{0} более не следит ни за одним сервером{1}", Context.User.Username, Environment.NewLine));
@@ -80,27 +113,29 @@ namespace Taymovichek.Modules
                 return;
             }
 
-            if(!Program.IsSubscribeExists(nickName, serverName))
+            if(!Program.IsSubscribeExists(serverName))
             {
                 await ReplyAsync(string.Format("{0} еще не следит за сервером {1}{2}", Context.User.Username, serverName, Environment.NewLine));
                 return;
             }
 
-            Program.Unwatch(nickName, serverName);
+            Program.Unwatch(serverName);
             await ReplyAsync(string.Format("{0} более не следит за сервером {1}{2}", Context.User.Username, serverName, Environment.NewLine));
         }
 
-        [Command("watch")]
+        [Command("watch"), RequireOwner()]
         public async Task Watch(string serverName)
         {
             string nickName = string.Format("{0}#{1}", Context.User.Username, Context.User.Discriminator);
+
+            //if(Context.Message.Author.)
 
             // Watch for everything
             if (serverName.Equals("*"))
             {
                 foreach (var server in Program.GetServerNames())
                 {
-                    Program.Watch(nickName, server);
+                    Program.Watch(server);
                 }
 
                 await ReplyAsync(string.Format("{0} следит за всеми серверами.{1}", Context.User.Username, Environment.NewLine));
@@ -114,15 +149,16 @@ namespace Taymovichek.Modules
                 return;
             }
 
-            if (Program.IsSubscribeExists(nickName, serverName))
+            if (Program.IsSubscribeExists(serverName))
             {
                 await ReplyAsync(string.Format("{0} уже следит за сервером {1}{2}", serverName, Context.User.Username, Environment.NewLine));
                 return;
             }
 
-            Program.Watch(nickName, serverName);
+            Program.Watch(serverName);
             await ReplyAsync(string.Format("{0} теперь следит за сервером {1}{2}", Context.User.Username, serverName, Environment.NewLine));
         }
+
 
         [Command("status")]
         public async Task Status()
@@ -141,12 +177,12 @@ namespace Taymovichek.Modules
                     item.Value.Name,
                     item.Value.Online,
                     item.Value.Uptime,
-                    item.Value.Status.ToString());
+                    item.Value.Status.ToString() + "\n```");
 
                 string discordText = string.Format(DISCORD_FORMAT_STR,
                     item.Value.Online,
                     item.Value.Uptime,
-                    item.Value.Status.ToString());
+                    Program.EnquoteStatus(item.Value.Status));
 
                 sb.Append(consoleText);
 
