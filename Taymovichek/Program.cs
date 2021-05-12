@@ -29,16 +29,16 @@ namespace Taymovichek
         static void Main(string[] args) => new Program().RunBotAsync().GetAwaiter().GetResult();
 
         // Const things
-        private static int DELAY = 60 * 1000;                       // 60 sec (milliseconds)
-        private static int MAX_SECONDS_BETWEEN_UPDATE = 15 * 60;    // 15 min (seconds)
-        private static ulong CHANNEL_ID = 730891176114389150;       // textchannel id
+        public static string BASE_URL = @"http://wowcircle.net/stat.html";
+        private static string DISCORD_APP_TOKEN = "YOUR_TOKEN_HERE";
+        private static ulong CHANNEL_ID = 730891176114389150;           // textchannel id
+        private static int FETCH_DELAY = 60;                            // 60 sec 
+        private static int UPDATE_DELAY = 15 * 60;                      // 15 min (seconds)
 
         private static string BOT_PREFIX = "!";
-        private static string TOKEN = "YOUR_TOKEN_HERE";
-        private static string ANNOUNCEMENT_MESSAGE = "АХТУНГ ! ШОТОПРОИЗОШЛО !";
-
-        public static string SERVER_STATUS_URL = @"http://wowcircle.net/stat.html";
         private static string USER_AGENT = @"User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:78.0) Gecko/20100101 Firefox/78.0";
+        private static string ALLERT_MSG = "АХТУНГ ! ШОТОПРОИЗОШЛО !";
+
 
         private static string CFG_PREFIX = "[UserList]:";
         private static string CFG_SEPARATOR = "\r\n";
@@ -58,10 +58,26 @@ namespace Taymovichek
 
         static Configuration cfg = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
 
+        public static void LoadSettings()
+        {
+            try { BASE_URL = ConfigurationManager.AppSettings["BASE_URL"]; } catch { }
+            try { DISCORD_APP_TOKEN = ConfigurationManager.AppSettings["DISCORD_APP_TOKEN"]; } catch { }
+            try { CHANNEL_ID = ulong.Parse(ConfigurationManager.AppSettings["CHANNEL_ID"]); } catch { }
+            try { FETCH_DELAY = int.Parse(ConfigurationManager.AppSettings["FETCH_DELAY"]); } catch { }
+            try { UPDATE_DELAY = int.Parse(ConfigurationManager.AppSettings["UPDATE_DELAY"]); } catch { }
+            try { BOT_PREFIX = ConfigurationManager.AppSettings["BOT_PREFIX"]; } catch { }
+            try { USER_AGENT = ConfigurationManager.AppSettings["USER_AGENT"]; } catch { }
+            try { ALLERT_MSG = ConfigurationManager.AppSettings["ALLERT_MSG"]; } catch { }
+            Console.WriteLine("=>" + FETCH_DELAY);
+        }
+
         public async Task RunBotAsync()
         {
             // Read resources (prev settings)
             LoadResources();
+
+            // Load settings
+            LoadSettings();
 
             _client = new DiscordSocketClient();
             _commands = new CommandService();
@@ -77,7 +93,7 @@ namespace Taymovichek
 
             await RegisterCommandsAsync();
 
-            await _client.LoginAsync(TokenType.Bot, TOKEN);
+            await _client.LoginAsync(TokenType.Bot, DISCORD_APP_TOKEN);
 
             await _client.StartAsync();
 
@@ -212,7 +228,7 @@ namespace Taymovichek
                     Console.Error.WriteLine("Error: {0}", ex.Message);
                 }
 
-                int sleepTimeout = new Random().Next(DELAY, 2 * DELAY);
+                int sleepTimeout = new Random().Next(FETCH_DELAY, 2 * FETCH_DELAY) * 1000;
                 Thread.Sleep(sleepTimeout);
             }
         }
@@ -229,7 +245,7 @@ namespace Taymovichek
                 web.CacheOnly = false;
                 //web.CaptureRedirect = true;            
 
-                HtmlDocument doc = web.Load(SERVER_STATUS_URL);
+                HtmlDocument doc = web.Load(BASE_URL);
 
                 HtmlNode[] nodes = doc.DocumentNode.SelectNodes("//div[contains(@class, 'server-item-bg')]").ToArray();
 
@@ -286,7 +302,7 @@ namespace Taymovichek
                     // Uptime == 0 
                     // Stats last modf >= 10 min
                     if (cache[serverName].Uptime.Equals(TimeSpan.FromSeconds(0))
-                        || secondsBetweenUpdate >= MAX_SECONDS_BETWEEN_UPDATE)
+                        || secondsBetweenUpdate >= UPDATE_DELAY)
                     {
                         cache[serverName].Status = WowCircleServer.StatusEnum.DOWN;
                     }
@@ -317,7 +333,7 @@ namespace Taymovichek
                     && watchingList.Contains(serverName) 
                     && notifyCounters[serverName] == 0)
                 {
-                    string message = string.Format("{0} ->>>> {1}\n", ANNOUNCEMENT_MESSAGE, serverName);
+                    string message = string.Format("{0} ->>>> {1}\n", ALLERT_MSG, serverName);
                     notifications.Enqueue(new DiscordTextChannelNotificationEntity(_client, message, CHANNEL_ID));
                     notifyCounters[serverName]++;
                 }

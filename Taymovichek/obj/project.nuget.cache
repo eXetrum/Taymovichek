@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "VdphQLFr54HqWwCieD9InPnQCjfWukm1SEPuYZoVazpw2u1Ym+ukKaHBbvlrVTPOtOD9SQIrr0x17YqpZzRD0A==",
+  "dgSpecHash": "aVhfqGelG/Rf5x/sgmRdX2v80fl0mZ0P8cmqicgfxwQTgGRiS2RUj14IsobT4p4vxF8RTh49U7/f4qchMICOlQ==",
   "success": true,
-  "projectFilePath": "C:\\Users\\hAPpY\\source\\repos\\Taymovichek\\Taymovichek\\Taymovichek.csproj",
+  "projectFilePath": "D:\\temp\\Taymovichek\\Taymovichek\\Taymovichek.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\hAPpY\\.nuget\\packages\\discord.net\\2.2.0\\discord.net.2.2.0.nupkg.sha512",
     "C:\\Users\\hAPpY\\.nuget\\packages\\discord.net.commands\\2.2.0\\discord.net.commands.2.2.0.nupkg.sha512",

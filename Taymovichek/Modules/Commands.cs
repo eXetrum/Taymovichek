@@ -72,7 +72,7 @@ namespace Taymovichek.Modules
             var embed = new EmbedBuilder()
             {
                 Title = title,
-                Url = Program.SERVER_STATUS_URL,
+                Url = Program.BASE_URL,
                 Fields = fields
             };
 
@@ -191,7 +191,7 @@ namespace Taymovichek.Modules
 
             var embed = new EmbedBuilder() {
                 Title = title,
-                Url = Program.SERVER_STATUS_URL,
+                Url = Program.BASE_URL,
                 Fields = fields
             };
   
