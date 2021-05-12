@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Reflection;
 
-// HUI ZNAET SHO nu tipo shobi service zainjektit
 using Microsoft.Extensions.DependencyInjection;
 
 // Discord API lib
